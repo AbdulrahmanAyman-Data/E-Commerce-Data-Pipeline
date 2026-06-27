@@ -1,0 +1,10 @@
+# Base image (from master)
+FROM hadoop-base-master:latest
+
+USER root
+
+# Start SSH and required services
+CMD ["/bin/bash", "-c", "service ssh start && \
+    /opt/hadoop/sbin/hadoop-daemon.sh start datanode && \
+    /opt/hadoop/bin/yarn --daemon start nodemanager && \
+    tail -f /dev/null"]

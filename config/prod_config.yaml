@@ -1,0 +1,10 @@
+hdfs:
+namenode_uri : "hdfs://prod-namenode.internal:9000"
+
+trino:
+host : "prod-trino.internal"
+port : 8080
+user : "svc-pipeline"
+
+spark:
+shuffle_partitions : 300

@@ -1,0 +1,366 @@
+version: "3.8"
+
+# ============================================================
+#  E-Commerce Data Pipeline — Unified Docker Compose
+#  Services: Hadoop (master + 2 slaves) · Spark · Jupyter
+#            Kafka · Kafka-UI · Hive Metastore · Trino
+#            Airflow (apiserver + scheduler + worker +
+#                     triggerer + dag-processor) · Redis · Postgres
+# ============================================================
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:3.1.6
+  environment:
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres-airflow:5432/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__FERNET_KEY: ""
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+  volumes:
+    - ./orchestration/airflow/dags:/opt/airflow/dags
+    - ./src:/opt/airflow/src
+    - airflow-logs:/opt/airflow/logs
+  depends_on:
+    postgres-airflow:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - pipeline-net
+
+services:
+
+  # ──────────────────────────────────────────────
+  #  HADOOP
+  # ──────────────────────────────────────────────
+  hadoop-master:
+    image: hadoop-base-master
+    build:
+      context: ./docker/hadoop
+      dockerfile: Dockerfile.master    # الـ Dockerfile الخاص بالـ master
+    container_name: hadoop-master-eco
+    hostname: master
+    ports:
+      - "9870:9870"   # HDFS NameNode UI
+      - "9000:9000"   # HDFS RPC
+      - "8088:8088"   # YARN ResourceManager UI
+    volumes:
+      - hadoop-master-data:/hadoop/dfs/name
+    networks:
+      - pipeline-net
+    healthcheck:
+      test: ["CMD-SHELL", "hdfs dfsadmin -report > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 10
+      start_period: 90s
+
+  hadoop-slave1:
+    image: hadoop-slave-image
+    build:
+      context: ./docker/hadoop
+      dockerfile: Dockerfile.slave     # الـ Dockerfile الخاص بالـ slaves
+    container_name: hadoop-slave1-eco
+    hostname: slave1
+    depends_on:
+      hadoop-master:
+        condition: service_started
+    volumes:
+      - hadoop-slave1-data:/hadoop/dfs/data
+    networks:
+      - pipeline-net
+
+  hadoop-slave2:
+    image: hadoop-slave-image
+    build:
+      context: ./docker/hadoop
+      dockerfile: Dockerfile.slave
+    container_name: hadoop-slave2-eco
+    hostname: slave2
+    depends_on:
+      hadoop-master:
+        condition: service_started
+    volumes:
+      - hadoop-slave2-data:/hadoop/dfs/data
+    networks:
+      - pipeline-net
+
+  # ──────────────────────────────────────────────
+  #  SPARK
+  # ──────────────────────────────────────────────
+  spark-master:
+    image: local-pyspark
+    build:
+      context: ./docker/spark
+      dockerfile: Dockerfile.spark
+    container_name: spark-master-eco
+    hostname: spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "8081:8080"   # Spark Master UI
+      - "7077:7077"   # Spark Master RPC
+    volumes:
+      - ./src:/opt/spark-notebooks/src
+      - ./data:/opt/spark-notebooks/data
+    networks:
+      - pipeline-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      retries: 5
+
+  spark-worker:
+    image: local-pyspark
+    build:
+      context: ./docker/spark
+      dockerfile: Dockerfile.spark
+    container_name: spark-worker-eco
+    hostname: spark-worker
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    ports:
+      - "8082:8081"   # Spark Worker UI
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    volumes:
+      - ./src:/opt/spark-notebooks/src
+      - ./data:/opt/spark-notebooks/data
+    networks:
+      - pipeline-net
+
+  jupyter:
+    image: local-pyspark
+    build:
+      context: ./docker/spark
+      dockerfile: Dockerfile.spark
+    container_name: jupyter-eco
+    hostname: jupyter
+    ports:
+      - "8888:8888"   # JupyterLab UI
+    volumes:
+      - ./src:/opt/spark-notebooks/src
+      - ./data:/opt/spark-notebooks/data
+    networks:
+      - pipeline-net
+
+  # ──────────────────────────────────────────────
+  #  KAFKA
+  # ──────────────────────────────────────────────
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka-eco
+    hostname: kafka
+    ports:
+      - "9092:9092"     # internal
+      - "29092:29092"   # external (من Windows)
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-eco:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-eco:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - pipeline-net
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 30s
+      retries: 5
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui-eco
+    ports:
+      - "8084:8080"   # Kafka UI
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-eco:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+
+  # ──────────────────────────────────────────────
+  #  HIVE METASTORE
+  # ──────────────────────────────────────────────
+  metastore-db:
+    image: postgres:13-alpine
+    container_name: metastore-db-eco
+    hostname: metastore-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: hive
+      POSTGRES_PASSWORD: hive
+      POSTGRES_DB: metastore
+    volumes:
+      - metastore-db-data:/var/lib/postgresql/data
+    networks:
+      - pipeline-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hive"]
+      interval: 10s
+      retries: 5
+
+  hive-metastore:
+    image: apache/hive:3.1.3
+    container_name: hive-metastore-eco
+    hostname: hive-metastore
+    ports:
+      - "9083:9083"   # Thrift Metastore
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: postgres
+      SKIP_SCHEMA_INIT: "false"
+      SERVICE_OPTS: >-
+        -Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver
+        -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://metastore-db:5432/metastore
+        -Djavax.jdo.option.ConnectionUserName=hive
+        -Djavax.jdo.option.ConnectionPassword=hive
+        -Dhive.metastore.schema.verification=false
+        -Dhive.metastore.schema.verification.record.version=false
+    depends_on:
+      metastore-db:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+    healthcheck:
+      test: ["CMD-SHELL", "ss -tlnp | grep 9083 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ──────────────────────────────────────────────
+  #  TRINO
+  # ──────────────────────────────────────────────
+  trino:
+    image: trinodb/trino:446           # pin version 
+    container_name: trino-engine-eco
+    hostname: trino
+    ports:
+      - "8085:8080"   # Trino UI + REST API
+    volumes:
+      - ./trino-config/catalog:/etc/trino/catalog
+    depends_on:
+      hive-metastore:
+        condition: service_started
+    networks:
+      - pipeline-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
+      interval: 30s
+      retries: 5
+
+  # ──────────────────────────────────────────────
+  #  AIRFLOW INFRASTRUCTURE
+  # ──────────────────────────────────────────────
+  postgres-airflow:
+    image: postgres:16
+    container_name: postgres-airflow-eco
+    hostname: postgres-airflow
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-airflow-data:/var/lib/postgresql/data
+    networks:
+      - pipeline-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      retries: 5
+
+  redis:
+    image: redis:7.2-bookworm
+    container_name: redis-eco
+    hostname: redis
+    networks:
+      - pipeline-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+
+  # ──────────────────────────────────────────────
+  #  AIRFLOW SERVICES
+  # ──────────────────────────────────────────────
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init-eco
+    command: bash -c "airflow db migrate"
+    restart: "no"
+
+  airflow-apiserver:
+    <<: *airflow-common
+    container_name: airflow-apiserver-eco
+    command: airflow api-server
+    ports:
+      - "8083:8080"   # Airflow UI
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler-eco
+    command: airflow scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  airflow-worker:
+    <<: *airflow-common
+    container_name: airflow-worker-eco
+    command: airflow celery worker
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  airflow-triggerer:
+    <<: *airflow-common
+    container_name: airflow-triggerer-eco
+    command: airflow triggerer
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    container_name: airflow-dag-processor-eco
+    command: airflow dag-processor
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+# ──────────────────────────────────────────────
+#  VOLUMES
+# ──────────────────────────────────────────────
+volumes:
+  hadoop-master-data:
+  hadoop-slave1-data:
+  hadoop-slave2-data:
+  metastore-db-data:
+  postgres-airflow-data:
+  airflow-logs:
+
+# ──────────────────────────────────────────────
+#  NETWORK
+# ──────────────────────────────────────────────
+networks:
+  pipeline-net:
+    driver: bridge

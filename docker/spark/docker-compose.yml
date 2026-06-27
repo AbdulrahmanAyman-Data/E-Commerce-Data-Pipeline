@@ -1,0 +1,62 @@
+services:
+  spark-master:
+    image: local-pyspark:latest
+    container_name: spark-master
+    hostname: spark-master
+    environment:
+      SPARK_MASTER_HOST: spark-master
+      SPARK_LOCAL_HOSTNAME: spark-master
+      SPARK_CLASSPATH: "/opt/spark/jars/*"
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+    volumes:
+      - ./data:/opt/spark-data
+    networks:
+      - shared-data-network
+
+
+  spark-worker:
+    image: local-pyspark:latest
+    container_name: spark-worker
+    hostname: spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_LOCAL_HOSTNAME: spark-worker
+      HADOOP_USER_NAME: hdfs
+      SPARK_CLASSPATH: "/opt/spark/jars/*"
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    ports:
+      - "8082:8081"
+    volumes:
+      - ./data:/opt/spark-data
+    networks:
+      - shared-data-network
+
+  jupyter:
+    build: .
+    image: local-pyspark:latest
+    container_name: jupyter
+    hostname: jupyter
+    depends_on:
+      - spark-master
+    environment:
+      HADOOP_USER_NAME: hdfs
+      SPARK_CLASSPATH: "/opt/spark/jars/*"
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebook:/opt/spark-notebooks
+      - ./data:/opt/spark-data
+      - jupyter-data:/home/spark
+    networks:
+      - shared-data-network
+
+networks:
+  shared-data-network:
+    external: true
+
+volumes:
+  jupyter-data:

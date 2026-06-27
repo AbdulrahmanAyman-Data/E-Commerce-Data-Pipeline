@@ -1,0 +1,16 @@
+hdfs:
+  bronze_path : "/data/bronze"
+  silver_path : "/data/silver"
+  gold_path : "/data/gold"
+
+Kafka:
+  topic_events: "ecommerce.events.row"
+  consumer_group: "events-stream_consumer"
+
+trino:
+  catalog: "hive"
+  database: "ecommerce_gold"
+
+spark:
+  app_name: "ecommerce-pipline"
+  shuffle_partitions : 4

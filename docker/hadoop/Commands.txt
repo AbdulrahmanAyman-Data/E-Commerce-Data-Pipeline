@@ -1,0 +1,59 @@
+Docker steps
+
+// before u run anything download hadoop-3.3.6.tar.gz using wget
+wget https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+
+docker pull ubuntu:20.04
+
+docker build -t master2 -f Dockerfile.master .
+docker-compose -p my_hadoop up -d
+
+first time only (format namenode)
+hdfs namenode -format
+
+/opt/hadoop/etc/hadoop
+
+in master
+// edit workers manually
+apt install nano
+apt install iputils-ping
+ssh-keygen -t rsa -b 4096 -N "" -f ~/.ssh/id_rsa
+ssh-copy-id hdfs@slave1
+ssh-copy-id hdfs@slave2
+/opt/hadoop/sbin/start-dfs.sh
+su - hdfs
+jps
+
+in slaves
+// dont forget to edit yarn-site.xml manually
+apt install nano
+ssh-keygen -A
+/usr/sbin/sshd
+su - hdfs
+
+
+running program
+
+docker cp "in.csv" master:/home/hdfs/in.csv
+
+hdfs dfs -ls
+
+hdfs dfs -mkdir -p /user/hdfs/input/
+
+hdfs dfs -put in.csv /user/hdfs/input/
+
+hdfs dfs -ls /user/hdfs/input
+
+hadoop jar /opt/hadoop-3.3.6/share/hadoop/tools/lib/hadoop-streaming-3.3.6.jar \
+   -input /user/hdfs/input/in.csv \
+   -output /user/hdfs/output \
+   -mapper mapper.R \
+   -reducer reducer.R \
+   -file mapper.R \
+   -file reducer.R
+   
+   
+hdfs dfs -get /user/hdfs/output/part-00000 ./output.txt
+
+hdfs dfs -rm -r /user/hdfs/output
+   

@@ -1,0 +1,10 @@
+hdfs:
+namenode_uri : "hdfs://hadoop-master:9000"
+
+trino:
+host : trino_engine
+port : 8080
+user : admin
+
+spark:
+shuffle_partitions : 2
