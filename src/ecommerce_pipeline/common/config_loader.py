@@ -5,7 +5,7 @@ from typing import Any
 
 def load_config() -> dict[str, Any]:
     env = os.getenv("ENV", "dev")
-    config_dir = Path(__file__).resolve().parents(3) / "config"
+    config_dir = Path(__file__).resolve().parents[3] / "config"
     base_path = config_dir / "base_config.yaml"
     env_path = config_dir / f"{env}_config.yaml"
 

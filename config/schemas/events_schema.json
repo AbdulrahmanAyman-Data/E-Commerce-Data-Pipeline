@@ -1,0 +1,19 @@
+{
+  "table": "events",
+  "columns": [
+    {"name": "id", "type": "integer", "nullable": false},
+    {"name": "user_id", "type": "integer", "nullable": true},
+    {"name": "sequence_number", "type": "integer", "nullable": true},
+    {"name": "session_id", "type": "string", "nullable": true},
+    {"name": "created_at", "type": "timestamp", "nullable": false},
+    {"name": "ip_address", "type": "string", "nullable": true},
+    {"name": "city", "type": "string", "nullable": true},
+    {"name": "state", "type": "string", "nullable": true},
+    {"name": "postal_code", "type": "string", "nullable": true},
+    {"name": "browser", "type": "string", "nullable": true},
+    {"name": "traffic_source", "type": "string", "nullable": true},
+    {"name": "uri", "type": "string", "nullable": true},
+    {"name": "event_type", "type": "string", "nullable": true}
+  ],
+  "primary_key": "id"
+}

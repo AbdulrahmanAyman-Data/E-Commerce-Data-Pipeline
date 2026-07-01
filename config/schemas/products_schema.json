@@ -1,0 +1,15 @@
+{
+    "table": "products",
+    "columns": [
+        {"name": "id", "type": "integer", "nullable": false},
+        {"name": "cost", "type": "float", "nullable": true},
+        {"name": "category", "type": "string", "nullable": true},
+        {"name": "name", "type": "string", "nullable": true},
+        {"name": "brand", "type": "string", "nullable": true},
+        {"name": "retail_price", "type": "float", "nullable": true},
+        {"name": "department", "type": "string", "nullable": true},
+        {"name": "sku", "type": "string", "nullable": true},
+        {"name": "distribution_center_id", "type": "integer", "nullable": true}
+    ],
+    "primary_key": "id"
+}

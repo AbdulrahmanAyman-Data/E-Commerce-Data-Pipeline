@@ -1,0 +1,18 @@
+{
+  "table": "inventory_items",
+  "columns": [
+    {"name": "id", "type": "integer", "nullable": false},
+    {"name": "product_id", "type": "integer", "nullable": true},
+    {"name": "created_at", "type": "timestamp", "nullable": false},
+    {"name": "sold_at", "type": "timestamp", "nullable": true},
+    {"name": "cost", "type": "float", "nullable": true},
+    {"name": "product_category", "type": "string", "nullable": true},
+    {"name": "product_name", "type": "string", "nullable": true},
+    {"name": "product_brand", "type": "string", "nullable": true},
+    {"name": "product_retail_price", "type": "float", "nullable": true},
+    {"name": "product_department", "type": "string", "nullable": true},
+    {"name": "product_sku", "type": "string", "nullable": true},
+    {"name": "product_distribution_center_id", "type": "integer", "nullable": true}
+  ],
+  "primary_key": "id"
+}

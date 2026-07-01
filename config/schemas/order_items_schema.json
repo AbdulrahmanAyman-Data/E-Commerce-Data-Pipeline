@@ -1,0 +1,17 @@
+{
+  "table": "order_items",
+  "columns": [
+    {"name": "id", "type": "integer", "nullable": false},
+    {"name": "order_id", "type": "integer", "nullable": false},
+    {"name": "user_id", "type": "integer", "nullable": false},
+    {"name": "product_id", "type": "integer", "nullable": true},
+    {"name": "inventory_item_id", "type": "integer", "nullable": true},
+    {"name": "status", "type": "string", "nullable": true},
+    {"name": "created_at", "type": "timestamp", "nullable": false},
+    {"name": "shipped_at", "type": "timestamp", "nullable": true},
+    {"name": "delivered_at", "type": "timestamp", "nullable": true},
+    {"name": "returned_at", "type": "timestamp", "nullable": true},
+    {"name": "sale_price", "type": "float", "nullable": true}
+  ],
+  "primary_key": "id"
+}

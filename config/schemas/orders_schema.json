@@ -1,0 +1,15 @@
+{
+    "table": "orders",
+    "columns":[
+        {"name": "order_id", "type": "integer", "nullable": false},
+        {"name": "user_id", "type": "integer", "nullable": false},
+        {"name": "status", "type": "string", "nullable": true},
+        {"name": "gender", "type": "string", "nullable": true},
+        {"name": "created_at", "type": "timestamp", "nullable": false},
+        {"name": "returned_at", "type": "timestamp", "nullable": true},
+        {"name": "shipped_at", "type": "timestamp", "nullable": true},
+        {"name": "delivered_at", "type": "timestamp", "nullable": true},
+        {"name": "num_of_item", "type": "integer", "nullable": true}
+    ],
+    "primary_key": "order_id"
+}

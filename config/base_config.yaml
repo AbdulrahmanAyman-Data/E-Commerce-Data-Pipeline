@@ -13,4 +13,4 @@ trino:
 
 spark:
   app_name: "ecommerce-pipline"
-  shuffle_partitions : 4
+  shuffle_partitions: 4
