@@ -18,7 +18,7 @@ BATCH_TABLES = [
 
 def load_schema(table: str) -> dict:
     schema_path =(
-         Path(__file__).resolve().parents[2]
+         Path(__file__).resolve().parents[3]
         / "config" / "schemas" / f"{table}_schema.json"
     )
     with open(schema_path, "r") as f:
@@ -69,7 +69,7 @@ def run_bronze_ingestion() -> None:
     namenode = hdfs_cfg.get("namenode_uri", "hdfs://master:9000")
     bronze_path = hdfs_cfg.get("bronze_path", "/data/bronze")
 
-    raw_dir = Path(__file__).resolve().parents[2] / "Data" / "raw"
+    raw_dir = Path(__file__).resolve().parents[3] / "Data" / "raw"
 
     logger.info("="*50)
     logger.info("Starting bronze ingestion")

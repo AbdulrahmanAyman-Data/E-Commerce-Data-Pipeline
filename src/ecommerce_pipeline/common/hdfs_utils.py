@@ -38,6 +38,7 @@ def hdfs_put(local_path: str, hdfs_path: str, overwrite: bool = True) ->bool:
     if cp_result.returncode != 0:
         logger.error(f"docker cp failed: {cp_result.stderr}")
         return False
+    
 
     cmd = ["dfs", "-put"]
     if overwrite:

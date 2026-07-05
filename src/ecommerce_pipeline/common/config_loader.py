@@ -1,9 +1,9 @@
 import os
 import yaml
 from pathlib import Path
-from typing import Any
+from typing import Dict, Any
 
-def load_config() -> dict[str, Any]:
+def load_config() -> Dict[str, Any]:
     env = os.getenv("ENV", "dev")
     config_dir = Path(__file__).resolve().parents[3] / "config"
     base_path = config_dir / "base_config.yaml"

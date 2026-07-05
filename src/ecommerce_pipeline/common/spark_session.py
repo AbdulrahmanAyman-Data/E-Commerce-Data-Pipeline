@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 from ecommerce_pipeline.common.config_loader import load_config
 
 def get_spark_session(app_name: str = None) -> SparkSession:
-    config = load_config
+    config = load_config()
     spark_cfg = config.get("spark", {})
     hdfs_cfg = config.get("hdfs", {})
 
