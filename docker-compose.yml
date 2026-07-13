@@ -140,8 +140,8 @@ services:
     ports:
       - "8888:8888"   # JupyterLab UI
     volumes:
-      - ./src:/opt/spark-notebooks/src
-      - ./data:/opt/spark-notebooks/data
+      - .:/opt/spark-notebooks
+      - /opt/spark-notebooks/.venv/
     networks:
       - pipeline-net
 

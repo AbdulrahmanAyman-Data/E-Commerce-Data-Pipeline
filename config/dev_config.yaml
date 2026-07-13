@@ -1,5 +1,5 @@
 hdfs:
-  namenode_uri : "hdfs://master:9000"
+  namenode_uri : "hdfs://hadoop-master:9000"
 
 trino:
   host : trino_engine

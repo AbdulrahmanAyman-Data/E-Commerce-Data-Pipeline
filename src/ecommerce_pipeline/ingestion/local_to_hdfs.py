@@ -66,7 +66,7 @@ def run_bronze_ingestion() -> None:
     config = load_config()
     hdfs_cfg = config.get("hdfs", {})
 
-    namenode = hdfs_cfg.get("namenode_uri", "hdfs://master:9000")
+    namenode = hdfs_cfg.get("namenode_uri", "hdfs://hadoop-master:9000")
     bronze_path = hdfs_cfg.get("bronze_path", "/data/bronze")
 
     raw_dir = Path(__file__).resolve().parents[3] / "Data" / "raw"

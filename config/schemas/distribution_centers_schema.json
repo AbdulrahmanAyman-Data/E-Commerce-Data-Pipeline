@@ -3,8 +3,8 @@
   "columns": [
     {"name": "id", "type": "integer", "nullable": false},
     {"name": "name", "type": "string", "nullable": true},
-    {"name": "latitude", "type": "float", "nullable": true},
-    {"name": "longitude", "type": "float", "nullable": true}
+    {"name": "latitude", "type": "double", "nullable": true},
+    {"name": "longitude", "type": "double", "nullable": true}
   ],
   "primary_key": "id"
 }
