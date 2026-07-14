@@ -30,3 +30,43 @@ def load_spark_schema(table: str) ->StructType:
         fields.append(StructField(col["name"], spark_type, col["nullable"]))
 
     return StructType(fields)
+
+
+def transform(spark, bronze_Path: str, silver_Path: str):
+    input_path = f"{bronze_Path}/products/products.csv" 
+    output_path = f"{silver_Path}/products"
+
+    schema = load_spark_schema("products")
+    logger.info(f"Reading from: {input_path}")
+
+    df = (
+        spark.read
+        .option("header", "true")
+        .schema(schema)
+        .csv(input_path)
+    ) 
+
+    df_clean = (
+        df
+
+    )
+
+
+    logger.info(f"Writing {df_clean.count()} rows to: {output_path} ")
+    df_clean.write.mode("overwrite").parquet(output_path)
+    logger.info("✅ distribution_centers Silver done!")
+
+
+def run():
+    config = load_config()
+    hdfs = config.get("hdfs", {})
+    namenode = hdfs.get("namenode_uri", "hdfs://master:9000")
+    bronze = namenode + hdfs.get("bronze_path", "/data/bronze")   # ← bronze_path
+    silver = namenode + hdfs.get("silver_path", "/data/silver")
+
+    spark = get_spark_session("silver-distribution-centers")
+    transform(spark, bronze, silver)
+    spark.stop()
+
+if __name__ == "__main__":
+    run()

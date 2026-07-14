@@ -31,7 +31,7 @@ def load_spark_schema(table: str) ->StructType:
 
     return StructType(fields)
 
-def transfom(spark, bronze_path: str, silver_path: str):
+def transform(spark, bronze_path: str, silver_path: str):
     input_path = f"{bronze_path}/distribution_centers/distribution_centers.csv"
     output_path = f"{silver_path}/distribution_centers"
 
@@ -66,11 +66,11 @@ def run():
     config = load_config()
     hdfs = config.get("hdfs", {})
     namenode = hdfs.get("namenode_uri", "hdfs://master:9000")
-    bronze = namenode + hdfs.get("bronze_path", "/data/bronze")   # ← bronze_path
+    bronze = namenode + hdfs.get("bronze_path", "/data/bronze")  
     silver = namenode + hdfs.get("silver_path", "/data/silver")
 
     spark = get_spark_session("silver-distribution-centers")
-    transfom(spark, bronze, silver)
+    transform(spark, bronze, silver)
     spark.stop()
 
 if __name__ == "__main__":
